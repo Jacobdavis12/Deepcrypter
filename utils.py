@@ -10,6 +10,11 @@ import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib as mpl
 
+import torch
+
+import os
+dirname = os.path.realpath('..')
+
 
 def characterMap(dataset, function):
     return [''.join([function(value) for value in data]) for data in dataset]
@@ -59,6 +64,29 @@ def deOneHotEncoder(data, alph):
 
     return out
 
+def substitutionEmbedder(X, y, alph = ' abcdefghijklmnopqrstuvwxyz'):
+    alphDict = {a:i for i, a in enumerate(alph)}
+    matrix = np.zeros((len(y), len(alph), len(alph)))
+
+    for i, d in enumerate(y):
+        for j, char in enumerate(d):
+            matrix[i][alphDict[char]][alphDict[X[i][j]]] = 1
+
+    return matrix
+
+def deSubstitutionEmbedder(X, y, alph = ' abcdefghijklmnopqrstuvwxyz'):
+    out = []
+
+    for i, d in enumerate(y):
+        sent = ''
+        for j, char in enumerate(X[i]):
+            if char not in [27,29,28]:
+                sent += alph[d[char]]
+        out.append(sent)
+
+    return out
+
+
 #Plots
 def plotConfusion(confusionMatrix, classes):
     fig, ax = plt.subplots()
@@ -74,3 +102,29 @@ def plotConfusion(confusionMatrix, classes):
     ax.set_title("Confusion matrix")
     fig.tight_layout()
     plt.show()
+
+#Saves
+def saveData(data, name):
+    filename = 'data/' + name
+    torch.save(data, filename + '.pt')
+
+def loadData(name):
+    filename = 'data/' + name + '.pt'
+    return torch.load(filename)
+
+def saveModel(model, name):
+    filename = 'models/' + name
+    torch.save(model, filename + '.pt')
+
+def loadModel(name):
+    filename = 'models/' + name
+    return torch.load(filename + '.pt')
+
+def saveTrans(encoder, decoder, name):
+    filename = 'models/' + name
+    torch.save(decoder, filename + 'decoder.pt')
+    torch.save(encoder, filename + 'encoder.pt')
+
+def loadTrans(name):
+    filename = 'models/' + name
+    return torch.load(filename + 'decoder.pt'), torch.load(filename + 'encoder.pt')

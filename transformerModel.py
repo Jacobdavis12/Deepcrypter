@@ -15,21 +15,64 @@ import time
 
 import matplotlib
 
-def transformDataLoader(X, y, embedder, sos, eos, pad, batchSize, device):
-    X = list(embed(X, embedder, sos, eos, pad))
-    y = list(embed(list(y), embedder, sos, eos, pad))
+from utils import dealphabetEmbedder
+
+def transformDataLoader(X, y, embedder, sos, eos, pad, MAX_LENGTH, device, split = 0.8):
+    X = list(embed(list(X), embedder, sos, eos, pad, MAX_LENGTH))
+    y = list(embed(list(y), embedder, sos, eos, pad, MAX_LENGTH))
     data = TensorDataset(torch.LongTensor(X).to(device),
                          torch.LongTensor(y).to(device))
-    return DataLoader(data, batch_size=batchSize)
+    train_size = int(split * len(data))
+    test_size = len(data) - train_size
+    train_dataset, test_dataset = torch.utils.data.random_split(data, [train_size, test_size])
+    
+    print(len(train_dataset), len(test_dataset))
+    return train_dataset, test_dataset
 
-def embed(dataset, embedder, sos, eos, pad):
-    length = max([len(data) for data in dataset])
+def embed(dataset, embedder, sos, eos, pad, length):
     for data in dataset:
-        yield [sos] + [embedder(value) for value in data] + (length- len(data))*[pad] + [eos]
+        yield [sos] + [embedder(value) for value in data] + (length - len(data) - 2)*[pad] + [eos]
 
 def deembed(dataset, deembedder):
     for data in dataset:
         yield ''.join([deembedder(value) for value in data])
+
+#Loss functions
+
+class CustomLoss(nn.Module):
+    def __init__(self): 
+        super(CustomLoss, self).__init__() 
+ 
+    def forward(self, predicted, target):
+        #Natural language
+        lossFunc = nn.NLLLoss()
+
+        #Cipher
+        cipherLoss = torch.zeros((target.size()))
+        crit = nn.CrossEntropyLoss()
+        for i in range(target.size()[0]):
+            for j in range(predicted.size()[2]):
+                if j in target[i]:
+                    equals = predicted[i][target[i] == j]
+                    top = equals.topk(1)[1]
+                    #equalsLoss = ((equals.max(dim=0)[0] - equals.min(dim=0)[0])**2).mean()
+                    #equalsLoss = 1 - torch.exp(equals[:, equals[0].topk(1)[1]]).mean()
+                    #equalsLoss = -1/(equals[:, range(target.size()[1]) != equals.topk(1)[1].mode(axis = 0)[0]]).max()
+                    # r=torch.randperm(equals.size()[0])
+                    #equalsLoss = crit(equals, top[r].T[0])
+                    equalsLoss = crit(equals, top.mode(axis = 0)[0].repeat(len(equals)))
+
+                    notEquals = predicted[i][target[i] != j]
+                    notEqualsLoss = 1/crit(notEquals, top.mode(axis = 0)[0].repeat(len(notEquals)))
+
+                    cipherLoss[i][j] = equalsLoss/2 + notEqualsLoss/2
+
+        print(list(deembed(predicted[-1].topk(1)[1].squeeze().unsqueeze(0), dealphabetEmbedder)))
+
+        return cipherLoss[cipherLoss != 0].mean()#/2 + \
+        #return lossFunc(predicted.view(-1, predicted.size(-1)), target.view(-1))#/2
+
+#Models
 
 class EncoderRNN(nn.Module):
     def __init__(self, input_size, hidden_size, dropout_p=0.1):
@@ -38,11 +81,12 @@ class EncoderRNN(nn.Module):
 
         self.embedding = nn.Embedding(input_size, hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size, batch_first=True)
+        self.lstm = nn.LSTM(hidden_size, hidden_size, batch_first=True)
         self.dropout = nn.Dropout(dropout_p)
 
     def forward(self, input):
         embedded = self.dropout(self.embedding(input))
-        output, hidden = self.gru(embedded)
+        output, hidden = self.lstm(embedded)
         return output, hidden
 
 class DecoderRNN(nn.Module):
@@ -50,6 +94,7 @@ class DecoderRNN(nn.Module):
         super(DecoderRNN, self).__init__()
         self.embedding = nn.Embedding(output_size, hidden_size)
         self.gru = nn.GRU(hidden_size, hidden_size, batch_first=True)
+        self.lstm = nn.LSTM(hidden_size, hidden_size, batch_first=True)
         self.out = nn.Linear(hidden_size, output_size)
         self.device = device
         self.MAX_LENGTH = MAX_LENGTH
@@ -65,7 +110,7 @@ class DecoderRNN(nn.Module):
             decoder_output, decoder_hidden  = self.forward_step(decoder_input, decoder_hidden)
             decoder_outputs.append(decoder_output)
 
-            if target_tensor is not None:
+            if False:#target_tensor is not None:
                 # Teacher forcing: Feed the target as the next input
                 decoder_input = target_tensor[:, i].unsqueeze(1) # Teacher forcing
             else:
@@ -80,7 +125,7 @@ class DecoderRNN(nn.Module):
     def forward_step(self, input, hidden):
         output = self.embedding(input)
         output = F.relu(output)
-        output, hidden = self.gru(output, hidden)
+        output, hidden = self.lstm(output, hidden)
         output = self.out(output)
         return output, hidden
 
@@ -98,8 +143,8 @@ def train_epoch(dataloader, encoder, decoder, encoder_optimizer,
         decoder_outputs, _, _ = decoder(encoder_outputs, encoder_hidden, target_tensor)
 
         loss = criterion(
-            decoder_outputs.view(-1, decoder_outputs.size(-1)),
-            target_tensor.view(-1)
+            decoder_outputs,
+            target_tensor
         )
         loss.backward()
 
@@ -153,7 +198,7 @@ class AttnDecoderRNN(nn.Module):
     def forward(self, encoder_outputs, encoder_hidden, target_tensor=None):
         batch_size = encoder_outputs.size(0)
         decoder_input = torch.empty(batch_size, 1, dtype=torch.long, device=self.device).fill_(self.SOS_token)
-        decoder_hidden = encoder_hidden
+        decoder_hidden = encoder_hidden[0]
         decoder_outputs = []
         attentions = []
 
@@ -164,7 +209,7 @@ class AttnDecoderRNN(nn.Module):
             decoder_outputs.append(decoder_output)
             attentions.append(attn_weights)
 
-            if target_tensor is not None:
+            if False:#target_tensor is not None:
                 # Teacher forcing: Feed the target as the next input
                 decoder_input = target_tensor[:, i].unsqueeze(1) # Teacher forcing
             else:
@@ -191,8 +236,11 @@ class AttnDecoderRNN(nn.Module):
 
         return output, hidden, attn_weights
 
+def norm(val, std=1/2):
+    return torch.exp(-(val/std)**2)
+
 def train(train_dataloader, encoder, decoder, n_epochs, learning_rate=0.001,
-               print_every=100, plot_every=100):
+               print_every=100, plot_every=100, criterion = 'standard'):
     start = time.time()
     plot_losses = []
     print_loss_total = 0  # Reset every print_every
@@ -200,7 +248,9 @@ def train(train_dataloader, encoder, decoder, n_epochs, learning_rate=0.001,
 
     encoder_optimizer = optim.Adam(encoder.parameters(), lr=learning_rate)
     decoder_optimizer = optim.Adam(decoder.parameters(), lr=learning_rate)
-    criterion = nn.NLLLoss()
+    if criterion == 'standard':
+        criterion = CustomLoss()
+
 
     for epoch in range(1, n_epochs + 1):
         loss = train_epoch(train_dataloader, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion)
@@ -233,13 +283,16 @@ def showPlot(points):
     plt.plot(points)
 
 def printEval(encoder, decoder, dataloader, dembedder, length = 10):
-    p, f = next(iter(dataloader))
+    criterion = CustomLoss()
+    c, p = next(iter(dataloader))
 
-    decoded_ids, decoder_attn = evaluate(encoder, decoder, f)
+    decoded_ids, decoder_attn = evaluate(encoder, decoder, c)
 
     decrypt = list(deembed(decoded_ids, dembedder))
-    cipher = list(deembed(f, dembedder))
+    cipher = list(deembed(c, dembedder))
     plain = list(deembed(p, dembedder))
+
+    #print(criterion(f, decoded_ids))
 
     for p,c,d in zip(plain[:length], cipher[:length], decrypt[:length]):
         print('Plaintext: ', p.replace('{', '').replace('}', '').replace('|', ''))
@@ -255,6 +308,8 @@ def evaluate(encoder, decoder, f):
 
     _, topi = decoder_outputs.topk(1)
     decoded_ids = topi.squeeze()
+    if len(decoded_ids.size()) == 1:
+        decoded_ids = decoded_ids.unsqueeze(0)
 
     return decoded_ids, decoder_attn
 
