@@ -31,11 +31,14 @@ def addNoise(data, noise):
 
     out = []
     for arr in data:
-        arr1 = [char for char in arr if random.randint(100)/100 < noise[0]]
-        arr1 = [char if random.randint(100)/100 < noise[0] else random.randint(0, 26) for char in arr1]
-        out.append(arr1)
+        arr1 = [char for char in arr if random.randint(0, 100)/100 > noise[0]]
+        arr1 = [char if random.randint(0, 100)/100 > noise[0] else randomChar() for char in arr1]
+        out.append(''.join(arr1))
 
     return out
+
+def randomChar():
+    return 'qwertyuiopasdfghjklzxcvbnm '[random.randint(0, 26)]
 
 def generics_kb(length):
     ds = load_dataset('generics_kb', split="train", streaming=True)
@@ -50,4 +53,3 @@ def bookcorpus(length):
     dataset = [d['text'] for d in dataset]
 
     return dataset
-
