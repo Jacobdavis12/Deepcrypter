@@ -4,7 +4,6 @@ Created on Sun Apr 28 06:12:33 2024
 
 @author: jacob
 """
-import pandas
 
 import torch
 import torch.nn as nn
@@ -26,8 +25,9 @@ import matplotlib as mpl
 
 
 #Local Modules
+from dataManager import generateData
 from ciphers import genericSubstitution, vigenere, substitution, column
-from utils import alphaspacelower, alphabetEmbedder, dealphabetEmbedder, oneHotEncoder,deOneHotEncoder, plotConfusion
+from utils import alphaspacelower, alphabetEmbedder, dealphabetEmbedder, oneHotEncoder,deOneHotEncoder, plotConfusion, loadData, saveData
 from classModel import Classifier, classifierDataLoader
 
 print('p')
@@ -36,34 +36,34 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
 ## Load data
-length = 51043
+length = 1020
 classes = ['substitution', 'vigenere', 'column']
-#X, Y = generateData(device, alphaspacelower, [substitution, vigenere, column], length = length)
+# X, Y = generateData(device, alphaspacelower, [substitution, vigenere, column], length = length)
 
-# print(next(Y[0]))
-# print(next(Y[1]))
-# print(next(Y[2]))
-# print(X[0])
-# del X[0]
+# # print(next(Y[0]))
+# # print(next(Y[1]))
+# # print(next(Y[2]))
+# # print(X[0])
+# # del X[0]
 
-## format into dataloader
+# ## format into dataloader
 # x = [item for sublist in Y for item in sublist]
 # label = np.arange(3)
 # label = np.tile(label, (length, 1))
 # label = label.T.flatten()
 
 # trainData, testData = classifierDataLoader(x, label, oneHotEncoder, 0.8, device = device)
-# torch.save(trainData, 'trainData.pt')
-# torch.save(testData, 'testData.pt')
-trainData = torch.load('trainData.pt')
-testData = torch.load('testData.pt')
+# saveData(trainData, 'trainData')
+# saveData(testData, 'testData')
+trainData = loadData('trainData')
+testData = loadData('testData')
 print('gg')
 
 trainloader = DataLoader(trainData, batch_size=30)
 print('loadedF')
 
 ## train model
-classifier = Classifier(102*length, 3).to(device)
+classifier = Classifier(1056, 3).to(device)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(classifier.parameters(), lr=0.001, momentum=0.9)
 

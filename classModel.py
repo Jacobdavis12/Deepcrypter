@@ -24,12 +24,12 @@ def classifierDataLoader(X, label, embedder, split, device):
     return train_dataset, test_dataset
 
 class Classifier(nn.Module):
-    def __init__(self, input_size, classes):
+    def __init__(self, midSize, classes):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 6, 5)
         self.pool = nn.MaxPool2d(2, 2)
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1 = nn.Linear(1056, 120)
+        self.fc1 = nn.Linear(midSize, 120)
         self.fc2 = nn.Linear(120, 84)
         self.fc3 = nn.Linear(84, classes)
 
