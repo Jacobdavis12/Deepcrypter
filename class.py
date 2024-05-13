@@ -4,7 +4,6 @@ Created on Sun Apr 28 06:12:33 2024
 
 @author: jacob
 """
-import pandas
 
 import torch
 import torch.nn as nn

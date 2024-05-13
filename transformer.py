@@ -4,7 +4,7 @@ Created on Sun Apr 28 06:12:33 2024
 
 @author: jacob
 """
-import pandas
+
 from datasets import load_dataset
 
 import torch
@@ -19,7 +19,7 @@ import time
 import math
 
 #Local Modules
-from dataManager import generateData
+from dataManager import generateData, generics_kb
 from ciphers import genericSubstitution, vigenere, substitution
 from utils import *
 from transformerModel import EncoderRNN, AttnDecoderRNN, DecoderRNN, train, transformDataLoader, BahdanauAttention, deembed, evaluateAndShowAttention, printEval
@@ -33,7 +33,7 @@ hidden_size = 128
 SOS_token = 27
 
 
-Y, X = generateData(device, alphaspacelower, [genericSubstitution])
+Y, X = generateData(device, alphaspacelower, [genericSubstitution], generics_kb)
 X = list(X[0])
 Y = list(Y)
 trainData, testData = transformDataLoader(X[:2], Y[:2], alphabetEmbedder, SOS_token, 28, 29, MAX_LENGTH, device)

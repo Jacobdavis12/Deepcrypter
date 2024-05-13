@@ -4,7 +4,7 @@ Created on Sun Apr 28 06:12:33 2024
 
 @author: jacob
 """
-import pandas
+
 from datasets import load_dataset
 
 import torch
@@ -19,7 +19,7 @@ import time
 import math
 
 #Local Modules
-from dataManager import generateData, generics_kb, onestop_english
+from dataManager import generateData, generics_kb, bookcorpus
 from ciphers import genericSubstitution, vigenere, substitution
 from utils import *
 from transformerModel import EncoderRNN, deembed
@@ -30,27 +30,28 @@ from classModel import Classifier
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #device = 'cpu'3
 print(device)
-MAX_LENGTH = 101
+MAX_LENGTH = 346
 hidden_size = 64
 SOS_token = 27
 batchsize = 30
-name = 'Gen64'
+name = 'book64'
+midSize = 17264
 
 
-Y, X = generateData(device, alphaspacelower, [genericSubstitution], onestop_english, length = 10000)
-trainData, testData = solverDataLoader(list(X[0]), list(Y), alphabetEmbedder, SOS_token, 28, 29, MAX_LENGTH, device)
-saveData(trainData, 'trainSolveAmazon')
-saveData(testData, 'testSolveAmazon')
+# Y, X = generateData(device, alphaspacelower, [genericSubstitution], bookcorpus, length = 10000)
+# trainData, testData = solverDataLoader(list(X[0]), list(Y), alphabetEmbedder, SOS_token, 28, 29, MAX_LENGTH, device)
+# saveData(trainData, 'trainSolve' + name)
+# saveData(testData, 'testSolve' + name)
 
-trainData = loadData('trainSolveAmazon')
-testData = loadData('testSolveAmazon')
-trainloader = DataLoader(trainData, batch_size=1)
+trainData = loadData('trainSolve' + name)
+testData = loadData('testSolve' + name)
+trainloader = DataLoader(trainData, batch_size=30)
 print('loaded Data')
 
 encoder = EncoderRNN(batchsize, hidden_size, dropout_p = 0).to(device)
-classifier = Classifier(4576, 27*27).to(device)
+classifier = Classifier(midSize, 27*27).to(device)
 
-losses = train(encoder, classifier, trainloader, 20, batchsize)
+losses = train(encoder, classifier, trainloader, 10, batchsize)
 saveModel(encoder, 'solveEncoder' + name)
 saveModel(classifier, 'solveClass' + name)
 

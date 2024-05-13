@@ -4,7 +4,7 @@ Created on Sun Apr 28 06:12:33 2024
 
 @author: jacob
 """
-import pandas
+
 from datasets import load_dataset
 
 import torch

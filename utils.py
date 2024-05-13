@@ -108,23 +108,23 @@ def saveData(data, name):
     filename = 'data/' + name
     torch.save(data, filename + '.pt')
 
-def loadData(name):
+def loadData(name, device):
     filename = 'data/' + name + '.pt'
-    return torch.load(filename)
+    return torch.load(filename, map_location=device)
 
 def saveModel(model, name):
     filename = 'models/' + name
     torch.save(model, filename + '.pt')
 
-def loadModel(name):
+def loadModel(name, device):
     filename = 'models/' + name
-    return torch.load(filename + '.pt')
+    return torch.load(filename + '.pt', map_location=device)
 
 def saveTrans(encoder, decoder, name):
     filename = 'models/' + name
     torch.save(decoder, filename + 'decoder.pt')
     torch.save(encoder, filename + 'encoder.pt')
 
-def loadTrans(name):
+def loadTrans(name, device):
     filename = 'models/' + name
-    return torch.load(filename + 'decoder.pt'), torch.load(filename + 'encoder.pt')
+    return torch.load(filename + 'decoder.pt', map_location=device), torch.load(filename + 'encoder.pt', map_location=device)

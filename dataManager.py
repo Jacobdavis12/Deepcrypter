@@ -6,8 +6,8 @@ Created on Sun Apr 28 06:12:33 2024
 """
 
 from datasets import load_dataset
-import torchtext
 
+import random
 
 #Local
 from utils import characterMap
@@ -21,21 +21,33 @@ def generateData(device, cleaner, encryptions, dataset, noise = [0, 0], length =
 
     Y = []
     for encryption in encryptions:
-        Y.append(encryption(X))
+        Y.append(addNoise(encryption(X), noise))
 
     return X, Y
 
+def addNoise(data, noise):
+    if noise == [0,0]:
+        return list(data)
+
+    out = []
+    for arr in data:
+        arr1 = [char for char in arr if random.randint(100)/100 < noise[0]]
+        arr1 = [char if random.randint(100)/100 < noise[0] else random.randint(0, 26) for char in arr1]
+        out.append(arr1)
+
+    return out
+
 def generics_kb(length):
-    dataset = load_dataset("onestop_english").with_format("torch")
-    perc = (len(dataset['train']) - length)/len(dataset['train'])
-    dataset = dataset['train'].train_test_split(test_size=perc)['train']['generic_sentence']
+    ds = load_dataset('generics_kb', split="train", streaming=True)
+    dataset = ds.take(length).with_format("torch")
+    dataset = [d['generic_sentence'] for d in dataset]
 
     return dataset
 
-def onestop_english(length):
+def bookcorpus(length):
     ds = load_dataset('bookcorpus', split="train", streaming=True)
     dataset = ds.take(length).with_format("torch")
-    dataset = dataset['text']
+    dataset = [d['text'] for d in dataset]
 
     return dataset
 
