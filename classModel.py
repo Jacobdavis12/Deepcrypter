@@ -37,7 +37,7 @@ class Classifier(nn.Module):
         self.conv2 = nn.Conv2d(6, 16, 5)
 
         #Claclulate mid: hacky but works
-        x = next(iter(trainloader))[0]
+        x = trainloader
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = torch.flatten(x, 1) # flatten all dimensions except batch

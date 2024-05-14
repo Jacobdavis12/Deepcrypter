@@ -52,7 +52,7 @@ print('loaded')
 ## train model
 epochs = 30
 batchSize = 30
-classifier = Classifier(trainloader, 3).to(device)
+classifier = Classifier(next(iter(trainloader))[0], 3).to(device)
 
 losses = train(classifier, trainloader, epochs, batchSize)
 saveLosses(losses, 'ggek')

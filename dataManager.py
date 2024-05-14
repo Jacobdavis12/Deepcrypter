@@ -21,7 +21,7 @@ def generateData(device, cleaner, encryptions, dataset, noise = [0, 0], length =
 
     Y = []
     for encryption in encryptions:
-        Y.append(addNoise(encryption(X), noise))
+        Y.append(addNoise(list(encryption(X)), noise))
 
     return X, Y
 
@@ -31,8 +31,8 @@ def addNoise(data, noise):
 
     out = []
     for arr in data:
-        arr1 = [char for char in arr if random.randint(0, 100)/100 > noise[0]]
-        arr1 = [char if random.randint(0, 100)/100 > noise[0] else randomChar() for char in arr1]
+        arr1 = [char for char in arr if random.randint(1, 100)/100 > noise[0]]
+        arr1 = [char if random.randint(0, 100)/100 > noise[1] else randomChar() for char in arr1]
         out.append(''.join(arr1))
 
     return out

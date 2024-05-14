@@ -29,6 +29,13 @@ def alphaspacelower(value):
     else:
         return ''
 
+def alphalower(value):
+    value = value.lower()
+    if ord(value) >= ord('a') and ord(value) <= ord('z'):
+        return value
+    else:
+        return ''
+
 #Embedders
 def alphabetEmbedder(value):
     if value == ' ':
@@ -106,7 +113,7 @@ def plotConfusion(confusionMatrix, classes, save =False):
     fig.tight_layout()
 
     if save != False:
-        plt.savefig(save)
+        plt.savefig(save + '.png')
 
     plt.show()
 
@@ -119,13 +126,21 @@ def loadData(name, device):
     filename = 'data/' + name + '.pt'
     return torch.load(filename, map_location=device)
 
-def saveModel(model, name):
+def saveClass(model, name):
     filename = 'models/' + name
     torch.save(model.state_dict(), filename + '.pth')
 
-def loadModel(name, device):
+def loadClass(name, device):
     filename = 'models/' + name
     return torch.load(filename + '.pth', map_location=device)
+
+def saveModel(model, name):
+    filename = 'models/' + name
+    torch.save(model, filename + '.pt')
+
+def loadModel(name, device):
+    filename = 'models/' + name
+    return torch.load(filename + '.pt', map_location=device)
 
 def saveTrans(encoder, decoder, name):
     filename = 'models/' + name

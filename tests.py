@@ -10,7 +10,7 @@ import os
 from dataManager import generateData, generics_kb, bookcorpus
 from ciphers import genericSubstitution, vigenere, substitution, column
 from classModel import classifierDataLoader
-from utils import alphaspacelower, oneHotEncoder, saveData, loadData
+from utils import alphaspacelower, alphalower, oneHotEncoder, saveData, loadData
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler
 import torch.optim as optim
 import torch
@@ -99,7 +99,7 @@ def testClassifier(device,\
                             epochs = 30
                         batchSize = 30
                         trainloader = DataLoader(trainData, batch_size=batchSize)
-                        classifier = Classifier(trainloader, 3).to(device)
+                        classifier = Classifier(next(iter(trainloader))[0], 3).to(device)
 
                         losses = train(classifier, trainloader, epochs, batchSize)
                         saveLosses(losses, 'classifier!' + name)
@@ -110,19 +110,30 @@ def testClassifier(device,\
 
                         plotConfusion(confusionMatrix, classNames, save = 'plots\classifier!' + name)
 
+                        t = np.arange(len(losses))
+
+                        fig, ax = plt.subplots()
+                        ax.plot(t, losses)
+
+                        ax.set(xlabel='iteration', ylabel='loss',
+                               title='Loss plot')
+                        ax.grid()
+
+                        fig.savefig('plots\loss!classifier!' + name + '.png')
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #device = 'cpu'
 print(device)
 
 
-noiseRange0 = [0, 0.1, 0.3]
-noiseRange1 = [0, 0.1, 0.3]
-lengthRange = [100, 1000, 10000]
+noiseRange0 = [0, 0.3]
+noiseRange1 = [0, 0.3]
+lengthRange = [10000]
 dataSetRange = [generics_kb, bookcorpus]
 hiddenSizeRange = [8, 16, 32, 64]
 cipherRange = [genericSubstitution, vigenere, substitution, column]
-cleanerRange = [alphaspacelower]
+cleanerRange = [alphalower]
 
 classes = [substitution, vigenere, column]
 # genData('cpu',\

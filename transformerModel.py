@@ -55,11 +55,6 @@ class CustomLoss(nn.Module):
                 if j in target[i]:
                     equals = predicted[i][target[i] == j]
                     top = equals.topk(1)[1]
-                    #equalsLoss = ((equals.max(dim=0)[0] - equals.min(dim=0)[0])**2).mean()
-                    #equalsLoss = 1 - torch.exp(equals[:, equals[0].topk(1)[1]]).mean()
-                    #equalsLoss = -1/(equals[:, range(target.size()[1]) != equals.topk(1)[1].mode(axis = 0)[0]]).max()
-                    # r=torch.randperm(equals.size()[0])
-                    #equalsLoss = crit(equals, top[r].T[0])
                     equalsLoss = crit(equals, top.mode(axis = 0)[0].repeat(len(equals)))
 
                     notEquals = predicted[i][target[i] != j]
@@ -69,8 +64,8 @@ class CustomLoss(nn.Module):
 
         print(list(deembed(predicted[-1].topk(1)[1].squeeze().unsqueeze(0), dealphabetEmbedder)))
 
-        return cipherLoss[cipherLoss != 0].mean()#/2 + \
-        #return lossFunc(predicted.view(-1, predicted.size(-1)), target.view(-1))#/2
+        return cipherLoss[cipherLoss != 0].mean()/2 + \
+         lossFunc(predicted.view(-1, predicted.size(-1)), target.view(-1))/2
 
 #Models
 
