@@ -25,72 +25,41 @@ import matplotlib as mpl
 
 
 #Local Modules
-from dataManager import generateData
+from dataManager import generateData, bookcorpus, generics_kb
 from ciphers import genericSubstitution, vigenere, substitution, column
-from utils import alphaspacelower, alphabetEmbedder, dealphabetEmbedder, oneHotEncoder,deOneHotEncoder, plotConfusion, loadData, saveData
-from classModel import Classifier, classifierDataLoader
+from utils import alphaspacelower, alphabetEmbedder, dealphabetEmbedder, oneHotEncoder,deOneHotEncoder, plotConfusion, loadData, saveData, saveLosses, loadLosses, saveModel, loadModel
+from classModel import Classifier, classifierDataLoader, train
 
-print('p')
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 #device = 'cpu'
 print(device)
 
 ## Load data
-length = 1020
-classes = ['substitution', 'vigenere', 'column']
-# X, Y = generateData(device, alphaspacelower, [substitution, vigenere, column], length = length)
+length = 100
+classes = [substitution, vigenere, column]
+X, Y = generateData(device, alphaspacelower, classes, generics_kb, length = length)
 
-# # print(next(Y[0]))
-# # print(next(Y[1]))
-# # print(next(Y[2]))
-# # print(X[0])
-# # del X[0]
-
-# ## format into dataloader
-# x = [item for sublist in Y for item in sublist]
-# label = np.arange(3)
-# label = np.tile(label, (length, 1))
-# label = label.T.flatten()
-
-# trainData, testData = classifierDataLoader(x, label, oneHotEncoder, 0.8, device = device)
-# saveData(trainData, 'trainData')
-# saveData(testData, 'testData')
-trainData = loadData('trainData')
-testData = loadData('testData')
-print('gg')
+trainData, testData = classifierDataLoader(Y, oneHotEncoder, 0.8, device, length)
+saveData(trainData, 'trainData')
+saveData(testData, 'testData')
+trainData = loadData('trainData', device)
+testData = loadData('testData', device)
 
 trainloader = DataLoader(trainData, batch_size=30)
-print('loadedF')
+print('loaded')
 
 ## train model
-classifier = Classifier(1056, 3).to(device)
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(classifier.parameters(), lr=0.001, momentum=0.9)
+epochs = 30
+batchSize = 30
+classifier = Classifier(next(iter(trainloader))[0], 3).to(device)
 
-losses = []
-for epoch in range(15):  # loop over the dataset multiple times
-    running_loss = 0.0
-    for i, data in enumerate(trainloader, 0):
-        # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data
+losses = train(classifier, trainloader, epochs, batchSize)
+saveLosses(losses, 'ggek')
+losses = loadLosses('ggek')
 
-        # zero the parameter gradients
-        optimizer.zero_grad()
-
-        # forward + backward + optimize
-        outputs = classifier(inputs)
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-
-        # print statistics
-        running_loss += loss.item()
-        if i % 500 == 499:    # print every 2000 mini-batches
-            print(f'[{epoch + 1}, {i + 1:5d}] loss: {running_loss / 200:.3f}')
-            losses.append([running_loss])
-            running_loss = 0.0
-
-torch.save(classifier.state_dict(), 'classifierTrans1.pth')
+saveModel(classifier, 'classifierTrans1')
+classifier = loadModel('classifierTrans1', device)
 
 t = np.arange(len(losses))
 
@@ -110,9 +79,10 @@ print('Finished Training')
 #classifier.load_state_dict(torch.load('classifier.pth'))
 
 ##Test
-confusionMatrix = classifier.test(testData, classes)
+classNames = [i.__name__ for i in classes]
+confusionMatrix = classifier.test(testData, classNames)
 
-plotConfusion(confusionMatrix, classes)
+plotConfusion(confusionMatrix, classNames)
 
 
 

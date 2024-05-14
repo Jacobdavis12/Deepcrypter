@@ -12,6 +12,8 @@ import matplotlib as mpl
 
 import torch
 
+import numpy as np
+
 import os
 dirname = os.path.realpath('..')
 
@@ -23,6 +25,13 @@ def characterMap(dataset, function):
 def alphaspacelower(value):
     value = value.lower()
     if ord(value) >= ord('a') and ord(value) <= ord('z') or value == ' ':
+        return value
+    else:
+        return ''
+
+def alphalower(value):
+    value = value.lower()
+    if ord(value) >= ord('a') and ord(value) <= ord('z'):
         return value
     else:
         return ''
@@ -40,7 +49,8 @@ def dealphabetEmbedder(value):
     else:
         return chr(value + ord('a') - 1)
 
-def oneHotEncoder(data, alph, length):
+def oneHotEncoder(data, alph):
+    length = max([len(i) for i in data])
     alphDict = {a:i for i, a in enumerate(alph)}
     matrix = np.empty((len(data), length, len(alph)))
 
@@ -88,7 +98,7 @@ def deSubstitutionEmbedder(X, y, alph = ' abcdefghijklmnopqrstuvwxyz'):
 
 
 #Plots
-def plotConfusion(confusionMatrix, classes):
+def plotConfusion(confusionMatrix, classes, save =False):
     fig, ax = plt.subplots()
     im = ax.imshow(confusionMatrix)
     ax.set_xticks(np.arange(len(classes)), labels=classes)
@@ -101,6 +111,10 @@ def plotConfusion(confusionMatrix, classes):
     
     ax.set_title("Confusion matrix")
     fig.tight_layout()
+
+    if save != False:
+        plt.savefig(save + '.png')
+
     plt.show()
 
 #Saves
@@ -111,6 +125,14 @@ def saveData(data, name):
 def loadData(name, device):
     filename = 'data/' + name + '.pt'
     return torch.load(filename, map_location=device)
+
+def saveClass(model, name):
+    filename = 'models/' + name
+    torch.save(model.state_dict(), filename + '.pth')
+
+def loadClass(name, device):
+    filename = 'models/' + name
+    return torch.load(filename + '.pth', map_location=device)
 
 def saveModel(model, name):
     filename = 'models/' + name
@@ -125,6 +147,15 @@ def saveTrans(encoder, decoder, name):
     torch.save(decoder, filename + 'decoder.pt')
     torch.save(encoder, filename + 'encoder.pt')
 
-def loadTrans(name, device):
-    filename = 'models/' + name
-    return torch.load(filename + 'decoder.pt', map_location=device), torch.load(filename + 'encoder.pt', map_location=device)
+def loadLosses(name):
+    filename = 'losses/' + name
+    with open(filename + '.npy', 'rb') as f:
+        a = np.load(f)
+
+    return a
+
+def saveLosses(losses,name):
+    filename = 'losses/' + name
+    with open(filename + '.npy', 'wb') as f:
+        np.save(f, np.array(losses))
+

@@ -34,25 +34,27 @@ MAX_LENGTH = 346
 hidden_size = 64
 SOS_token = 27
 batchsize = 30
-named = '10Long'
-name = '10MixLong'
-midSize = 17264
+named = 'noise1000Book'
+name = 'noise1000Book'
 
 
-Y, X = generateData(device, alphaspacelower, [genericSubstitution], bookcorpus, length = 10)
+Y, X = generateData(device, alphaspacelower, [genericSubstitution], bookcorpus, noise = [0, 0], length = 1000)
+
 trainData, testData = solverDataLoader(list(X[0]), list(Y), alphabetEmbedder, SOS_token, 28, 29, MAX_LENGTH, device)
 saveData(trainData, 'trainSolve' + named)
 saveData(testData, 'testSolve' + named)
 
 trainData = loadData('trainSolve' + named, device)
 testData = loadData('testSolve' + named, device)
+print('dataLoded')
 trainloader = DataLoader(trainData, batch_size=30)
 print('loaded Data')
 
 encoder = EncoderRNN(batchsize, hidden_size, dropout_p = 0).to(device)
-classifier = Classifier(midSize, 27*27).to(device)
+encoder_outputs, _ = encoder(next(iter(trainloader))[0])
+classifier = Classifier(encoder_outputs.unsqueeze(1).to('cpu'), 27*27).to(device)
 
-losses = train(encoder, classifier, trainloader, 8000, batchsize, JointLoss())
+losses = train(encoder, classifier, trainloader, 100, batchsize, JointLoss())
 saveModel(encoder, 'solveEncoder' + name)
 saveModel(classifier, 'solveClass' + name)
 
@@ -80,7 +82,7 @@ for c, d, t in zip(ciphertext[:10], decrypt[:10], target[:10]):
     print('Ciphertext: ', c.replace('{', '').replace('}', '').replace('|', ''))
     print('Decryption: ', d)
     _, t1 = torch.max(t, 1)
-    print('Target: ', t1)
+    #print('Target: ', t1)
     print()
 
 print()
